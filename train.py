@@ -1,3 +1,5 @@
+from torch import optim
+
 from basic_fcn import *
 import time
 from torch.utils.data import DataLoader
@@ -45,16 +47,17 @@ test_loader = DataLoader(dataset=test_dataset, batch_size= 16, shuffle=False)
 epochs =20
 
 n_class = 21
-
 fcn_model = FCN(n_class=n_class)
 fcn_model.apply(init_weights)
 
-device =   # TODO determine which device to use (cuda or cpu)
+#device =  "gpu" # TODO determine which device to use (cuda or cpu)
 
-optimizer = # TODO choose an optimizer
-criterion =  # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
+optimizer = optim.Adam(fcn_model.parameters()) # TODO choose an optimizer
+criterion = torch.nn.CrossEntropyLoss() # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
 
-fcn_model =  # TODO transfer the model to the device
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+fcn_model.to(device)
+# TODO transfer the model to the device
 
 
 # TODO
@@ -68,17 +71,26 @@ def train():
 
 
             # both inputs and labels have to reside in the same device as the model's
-            inputs =  inputs.to()# TODO transfer the input to the same device as the model's
-            labels =   # TODO transfer the labels to the same device as the model's
+            inputs =  inputs.to(device)# TODO transfer the input to the same device as the model's
+            labels = labels.to(device)  # TODO transfer the labels to the same device as the model's
 
-            outputs =  # TODO  Compute outputs. we will not need to transfer the output, it will be automatically in the same device as the model's!
+            outputs = fcn_model(inputs) # TODO  Compute outputs. we will not need to transfer the output, it will be automatically in the same device as the model's!
 
-            loss =   #TODO  calculate loss
+            loss = criterion(outputs, labels)  #TODO  calculate loss
 
             # TODO  backpropagate
 
+            # Compute the gradients
+            loss.backward()
+
+
             # TODO  update the weights
 
+            # Update the model parameters
+            optimizer.step()
+
+            # Clear the gradients
+            optimizer.zero_grad()
 
             if iter % 10 == 0:
                 print("epoch{}, iter{}, loss: {}".format(epoch, iter, loss.item()))
@@ -90,7 +102,8 @@ def train():
         if current_miou_score > best_iou_score:
             best_iou_score = current_miou_score
             # save the best model
-    
+            #Save the model
+            torch.save(fcn_model.state_dict(), "./")
  #TODO
 def val(epoch):
     fcn_model.eval() # Put in eval mode (disables batchnorm/dropout) !
