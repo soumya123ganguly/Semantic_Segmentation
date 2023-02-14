@@ -20,8 +20,6 @@ def init_weights(m):
         torch.nn.init.xavier_uniform_(m.weight.data)
         torch.nn.init.normal_(m.bias.data) #xavier not applicable for biases
 
-
-
 #TODO Get class weights
 def getClassWeights():
 
@@ -63,9 +61,16 @@ fcn_model.to(device)
 # TODO
 def train():
     best_iou_score = 0.0
+    losses = []
+    mean_iou_scores = []
+    accuracy = []
 
     for epoch in range(epochs):
         ts = time.time()
+        total_loss = 0
+        total_accuracy = 0
+        total_iou = 0
+        num_batches = 0
         for iter, (inputs, labels) in enumerate(train_loader):
             # TODO  reset optimizer gradients
 
@@ -91,10 +96,15 @@ def train():
 
             # Clear the gradients
             optimizer.zero_grad()
-
+            total_loss += loss.item()
+            total_accuracy += util.pixel_acc(outputs, labels)
+            total_iou += util.iou(outputs, labels)
+            num_batches += 1
             if iter % 10 == 0:
                 print("epoch{}, iter{}, loss: {}".format(epoch, iter, loss.item()))
-
+        losses.append(total_loss/num_batches)
+        losses.append(total_accuracy/num_batches)
+        losses.append(total_iou/num_batches)
         print("Finish epoch {}, time elapsed {}".format(epoch, time.time() - ts))
 
         current_miou_score = val(epoch)
@@ -103,7 +113,8 @@ def train():
             best_iou_score = current_miou_score
             # save the best model
             #Save the model
-            torch.save(fcn_model.state_dict(), "./")
+            torch.save(fcn_model.state_dict(), "./t.pth")
+
  #TODO
 def val(epoch):
     fcn_model.eval() # Put in eval mode (disables batchnorm/dropout) !
@@ -113,15 +124,26 @@ def val(epoch):
     accuracy = []
 
     with torch.no_grad(): # we don't need to calculate the gradient in the validation/testing
-
-        for iter, (input, label) in enumerate(val_loader):
-
-
-
-
-    print(f"Loss at epoch: {epoch} is {np.mean(losses)}")
-    print(f"IoU at epoch: {epoch} is {np.mean(mean_iou_scores)}")
-    print(f"Pixel acc at epoch: {epoch} is {np.mean(accuracy)}")
+      for epoch in range(epochs):
+        total_loss = 0
+        total_accuracy = 0
+        total_iou = 0
+        num_batches = 0
+        for iter, (inputs, labels) in enumerate(val_loader):
+          inputs =  inputs.to(device)
+          labels = labels.to(device)
+          outputs = fcn_model(inputs)
+          loss = criterion(outputs, labels)
+          total_loss += loss.item()
+          total_accuracy += util.pixel_acc(outputs, labels)
+          total_iou += util.iou(outputs, labels)
+          num_batches += 1
+        losses.append(total_loss/num_batches)
+        losses.append(total_accuracy/num_batches)
+        losses.append(total_iou/num_batches)
+      print(f"Loss at epoch: {epoch} is {total_loss/num_batches}")
+      print(f"IoU at epoch: {epoch} is {total_iou/num_batches}")
+      print(f"Pixel acc at epoch: {epoch} is {total_accuracy/num_batches}")
 
     fcn_model.train() #TURNING THE TRAIN MODE BACK ON TO ENABLE BATCHNORM/DROPOUT!!
 
@@ -134,10 +156,22 @@ def modelTest():
 
 
     with torch.no_grad():  # we don't need to calculate the gradient in the validation/testing
-
-        for iter, (input, label) in enumerate(test_loader):
-
-
+      total_loss = 0
+      total_accuracy = 0
+      total_iou = 0
+      num_batches = 0
+      for iter, (inputs, labels) in enumerate(test_loader):
+        inputs =  inputs.to(device)
+        labels = labels.to(device)
+        outputs = fcn_model(inputs)
+        loss = criterion(outputs, labels)
+        total_loss += loss.item()
+        total_accuracy += util.pixel_acc(outputs, labels)
+        total_iou += util.iou(outputs, labels)
+        num_batches += 1
+      print(total_loss/num_batches, 
+            total_accuracy/num_batches,
+            total_iou/num_batches)
 
     fcn_model.train()  #TURNING THE TRAIN MODE BACK ON TO ENABLE BATCHNORM/DROPOUT!!
 
