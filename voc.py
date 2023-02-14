@@ -54,10 +54,7 @@ class VOC(data.Dataset):
             img = self.transform(img)
         if self.target_transform is not None:
             mask = self.target_transform(mask)
-
-        print(img)
         mask[mask==ignore_label]=0
-
         return img, mask
 
     def __len__(self):
