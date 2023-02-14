@@ -23,18 +23,13 @@ palette = [0, 0, 0, 128, 0, 0, 0, 128, 0, 128, 128, 0, 0, 0, 128, 128, 0, 128, 0
 def make_dataset(mode):
     assert mode in ['train', 'val', 'test']
     items = []
-    if mode == 'train':
-        img_path = os.path.join(root, 'VOCdevkit', 'VOC2007', 'JPEGImages')
-        mask_path = os.path.join(root, 'VOCdevkit', 'VOC2007', 'SegmentationClass')
-        data_list = [l.strip('\n') for l in open(os.path.join(
-            root, 'VOCdevkit', 'VOC2007', 'ImageSets', 'Segmentation', 'train.txt')).readlines()]
-        for it in data_list:
-            item = (os.path.join(img_path, it + '.jpg'), os.path.join(mask_path, it + '.png'))
-            items.append(item)
-    elif mode == 'val':
-        #TODO
-    else:
-        # TODO FOR TEST SET
+    img_path = os.path.join(root, 'VOCdevkit', 'VOC2007', 'JPEGImages')
+    mask_path = os.path.join(root, 'VOCdevkit', 'VOC2007', 'SegmentationClass')
+    data_list = [l.strip('\n') for l in open(os.path.join(
+    root, 'VOCdevkit', 'VOC2007', 'ImageSets', 'Segmentation', '{}.txt'.format(mode))).readlines()]
+    for it in data_list:
+        item = (os.path.join(img_path, it + '.jpg'), os.path.join(mask_path, it + '.png'))
+        items.append(item)
     return items
 
 
@@ -60,6 +55,7 @@ class VOC(data.Dataset):
         if self.target_transform is not None:
             mask = self.target_transform(mask)
 
+        print(img)
         mask[mask==ignore_label]=0
 
         return img, mask
