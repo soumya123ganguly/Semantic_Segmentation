@@ -43,11 +43,13 @@ train_loader = DataLoader(dataset=train_dataset, batch_size= 16, shuffle=True)
 val_loader = DataLoader(dataset=val_dataset, batch_size= 16, shuffle=False)
 test_loader = DataLoader(dataset=test_dataset, batch_size= 16, shuffle=False)
 
-epochs =20
+epochs = 30
 
 n_class = 21
 fcn_model = FCN(n_class=n_class)
 fcn_model.apply(init_weights)
+best_valid_acc = 0
+best_valid_iou = 0
 train_epoch_loss = []
 valid_epoch_loss = []
 valid_epoch_loss = []
@@ -137,6 +139,10 @@ def val(epoch):
       valid_epoch_loss.append(total_loss/num_batches)
       accuracy.append(total_accuracy/num_batches)
       mean_iou_scores.append(total_iou/num_batches)
+      if total_iou/num_batches > best_valid_iou:
+        best_valid_iou = total_iou/num_batches
+      if total_accuracy/num_batches > best_valid_acc:
+        best_valid_iou = total_accuracy/num_batches
       print(f"Loss at epoch: {epoch} is {total_loss/num_batches}")
       print(f"IoU at epoch: {epoch} is {total_iou/num_batches}")
       print(f"Pixel acc at epoch: {epoch} is {total_accuracy/num_batches}")
@@ -163,7 +169,7 @@ def modelTest():
         total_accuracy += util.pixel_acc(outputs, labels)
         total_iou += util.iou(outputs, labels)
         num_batches += 1
-      print(total_loss/num_batches, 
+      print("test_metrics: ", 
             total_accuracy/num_batches,
             total_iou/num_batches)
 
@@ -174,10 +180,12 @@ if __name__ == "__main__":
     val(0)  # show the accuracy before training
     train()
     modelTest()
-    plt.plot(range(len(train_epoch_loss)), train_epoch_loss)
-    plt.plot(range(len(valid_epoch_loss)), valid_epoch_loss)
-    plt.savefig("t.png")
+    plt.figure()
+    plt.plot(np.arange(len(train_epoch_loss)), train_epoch_loss)
+    plt.plot(np.arange(len(valid_epoch_loss)), valid_epoch_loss)
+    plt.savefig("loss.png")
 
+    print("best_valid_metrics: ", best_valid_acc, best_valid_iou)
     # housekeeping
     gc.collect()
     torch.cuda.empty_cache()
