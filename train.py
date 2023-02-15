@@ -9,6 +9,7 @@ import voc
 import torchvision.transforms as standard_transforms
 import util
 import numpy as np
+import matplotlib.pyplot as plt
 
 class MaskToTensor(object):
     def __call__(self, img):
@@ -47,6 +48,11 @@ epochs =20
 n_class = 21
 fcn_model = FCN(n_class=n_class)
 fcn_model.apply(init_weights)
+train_epoch_loss = []
+valid_epoch_loss = []
+valid_epoch_loss = []
+mean_iou_scores = []
+accuracy = []
 
 #device =  "gpu" # TODO determine which device to use (cuda or cpu)
 
@@ -61,86 +67,76 @@ fcn_model.to(device)
 # TODO
 def train():
     best_iou_score = 0.0
-    losses = []
-    mean_iou_scores = []
-    accuracy = []
 
     for epoch in range(epochs):
-        ts = time.time()
-        total_loss = 0
-        total_accuracy = 0
-        total_iou = 0
-        num_batches = 0
-        for iter, (inputs, labels) in enumerate(train_loader):
-            # TODO  reset optimizer gradients
+      ts = time.time()
+      total_loss = 0
+      total_accuracy = 0
+      total_iou = 0
+      num_batches = 0
+      for iter, (inputs, labels) in enumerate(train_loader):
+        # TODO  reset optimizer gradients
 
 
-            # both inputs and labels have to reside in the same device as the model's
-            inputs =  inputs.to(device)# TODO transfer the input to the same device as the model's
-            labels = labels.to(device)  # TODO transfer the labels to the same device as the model's
+        # both inputs and labels have to reside in the same device as the model's
+        inputs =  inputs.to(device)# TODO transfer the input to the same device as the model's
+        labels = labels.to(device)  # TODO transfer the labels to the same device as the model's
 
-            outputs = fcn_model(inputs) # TODO  Compute outputs. we will not need to transfer the output, it will be automatically in the same device as the model's!
+        outputs = fcn_model(inputs) # TODO  Compute outputs. we will not need to transfer the output, it will be automatically in the same device as the model's!
 
-            loss = criterion(outputs, labels)  #TODO  calculate loss
+        loss = criterion(outputs, labels)  #TODO  calculate loss
 
-            # TODO  backpropagate
+        # TODO  backpropagate
 
-            # Compute the gradients
-            loss.backward()
+        # Compute the gradients
+        loss.backward()
 
 
-            # TODO  update the weights
+        # TODO  update the weights
 
-            # Update the model parameters
-            optimizer.step()
+        # Update the model parameters
+        optimizer.step()
 
-            # Clear the gradients
-            optimizer.zero_grad()
-            total_loss += loss.item()
-            total_accuracy += util.pixel_acc(outputs, labels)
-            total_iou += util.iou(outputs, labels)
-            num_batches += 1
-            if iter % 10 == 0:
-                print("epoch{}, iter{}, loss: {}".format(epoch, iter, loss.item()))
-        losses.append(total_loss/num_batches)
-        losses.append(total_accuracy/num_batches)
-        losses.append(total_iou/num_batches)
-        print("Finish epoch {}, time elapsed {}".format(epoch, time.time() - ts))
+        # Clear the gradients
+        optimizer.zero_grad()
+        total_loss += loss.item()
+        total_accuracy += util.pixel_acc(outputs, labels)
+        total_iou += util.iou(outputs, labels)
+        num_batches += 1
+        if iter % 10 == 0:
+          print("epoch{}, iter{}, loss: {}".format(epoch, iter, loss.item()))
+      train_epoch_loss.append(total_loss/num_batches)
+      print("Finish epoch {}, time elapsed {}".format(epoch, time.time() - ts))
 
-        current_miou_score = val(epoch)
+      current_miou_score = val(epoch)
 
-        if current_miou_score > best_iou_score:
-            best_iou_score = current_miou_score
-            # save the best model
-            #Save the model
-            torch.save(fcn_model.state_dict(), "./t.pth")
+      if current_miou_score > best_iou_score:
+        best_iou_score = current_miou_score
+      # save the best model
+      # save the model
+      torch.save(fcn_model.state_dict(), "./t.pth")
 
  #TODO
 def val(epoch):
     fcn_model.eval() # Put in eval mode (disables batchnorm/dropout) !
-    
-    losses = []
-    mean_iou_scores = []
-    accuracy = []
 
     with torch.no_grad(): # we don't need to calculate the gradient in the validation/testing
-      for epoch in range(epochs):
-        total_loss = 0
-        total_accuracy = 0
-        total_iou = 0
-        num_batches = 0
-        for iter, (inputs, labels) in enumerate(val_loader):
-          inputs =  inputs.to(device)
-          labels = labels.to(device)
-          outputs = fcn_model(inputs)
-          loss = criterion(outputs, labels)
-          total_loss += loss.item()
-          total_accuracy += util.pixel_acc(outputs, labels)
-          total_iou += util.iou(outputs, labels)
-          num_batches += 1
-        losses.append(total_loss/num_batches)
-        losses.append(total_accuracy/num_batches)
-        losses.append(total_iou/num_batches)
+      total_loss = 0
+      total_accuracy = 0
+      total_iou = 0
+      num_batches = 0
+      for iter, (inputs, labels) in enumerate(val_loader):
+        inputs =  inputs.to(device)
+        labels = labels.to(device)
+        outputs = fcn_model(inputs)
+        loss = criterion(outputs, labels)
+        total_loss += loss.item()
+        total_accuracy += util.pixel_acc(outputs, labels).item()
+        total_iou += util.iou(outputs, labels).item()
+        num_batches += 1
+      valid_epoch_loss.append(total_loss/num_batches)
+      accuracy.append(total_accuracy/num_batches)
+      mean_iou_scores.append(total_iou/num_batches)
       print(f"Loss at epoch: {epoch} is {total_loss/num_batches}")
       print(f"IoU at epoch: {epoch} is {total_iou/num_batches}")
       print(f"Pixel acc at epoch: {epoch} is {total_accuracy/num_batches}")
@@ -152,8 +148,6 @@ def val(epoch):
  #TODO
 def modelTest():
     fcn_model.eval()  # Put in eval mode (disables batchnorm/dropout) !
-
-
 
     with torch.no_grad():  # we don't need to calculate the gradient in the validation/testing
       total_loss = 0
@@ -175,13 +169,14 @@ def modelTest():
 
     fcn_model.train()  #TURNING THE TRAIN MODE BACK ON TO ENABLE BATCHNORM/DROPOUT!!
 
-
-
 if __name__ == "__main__":
 
     val(0)  # show the accuracy before training
     train()
     modelTest()
+    plt.plot(range(len(train_epoch_loss)), train_epoch_loss)
+    plt.plot(range(len(valid_epoch_loss)), valid_epoch_loss)
+    plt.savefig("t.png")
 
     # housekeeping
     gc.collect()
