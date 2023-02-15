@@ -44,6 +44,6 @@ class FCN(nn.Module):
         y3 = self.bn3(self.relu(self.deconv3(y2)))
         y4 = self.bn4(self.relu(self.deconv4(y3)))
         y5 = self.bn5(self.relu(self.deconv5(y4)))
-        score = self.classifier(y5)
+        score = nn.Softmax(dim=1)(self.classifier(y5))
 
         return score  # size=(N, n_class, H, W)
