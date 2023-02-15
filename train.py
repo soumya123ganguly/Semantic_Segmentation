@@ -48,8 +48,6 @@ epochs = 30
 n_class = 21
 fcn_model = FCN(n_class=n_class)
 fcn_model.apply(init_weights)
-best_valid_acc = 0
-best_valid_iou = 0
 train_epoch_loss = []
 valid_epoch_loss = []
 valid_epoch_loss = []
@@ -69,6 +67,7 @@ fcn_model.to(device)
 # TODO
 def train():
     best_iou_score = 0.0
+    best_acc_score = 0.0
 
     for epoch in range(epochs):
       ts = time.time()
@@ -110,13 +109,16 @@ def train():
       train_epoch_loss.append(total_loss/num_batches)
       print("Finish epoch {}, time elapsed {}".format(epoch, time.time() - ts))
 
-      current_miou_score = val(epoch)
+      current_miou_score, current_acc_score = val(epoch)
 
       if current_miou_score > best_iou_score:
         best_iou_score = current_miou_score
+      if current_acc_score > best_acc_score:
+        best_acc_score = current_acc_score
       # save the best model
       # save the model
       torch.save(fcn_model.state_dict(), "./t.pth")
+    print("best_valid_metrics: ", best_acc_score, best_iou_score)
 
  #TODO
 def val(epoch):
@@ -139,17 +141,13 @@ def val(epoch):
       valid_epoch_loss.append(total_loss/num_batches)
       accuracy.append(total_accuracy/num_batches)
       mean_iou_scores.append(total_iou/num_batches)
-      if total_iou/num_batches > best_valid_iou:
-        best_valid_iou = total_iou/num_batches
-      if total_accuracy/num_batches > best_valid_acc:
-        best_valid_iou = total_accuracy/num_batches
       print(f"Loss at epoch: {epoch} is {total_loss/num_batches}")
       print(f"IoU at epoch: {epoch} is {total_iou/num_batches}")
       print(f"Pixel acc at epoch: {epoch} is {total_accuracy/num_batches}")
 
     fcn_model.train() #TURNING THE TRAIN MODE BACK ON TO ENABLE BATCHNORM/DROPOUT!!
 
-    return np.mean(mean_iou_scores)
+    return total_iou/num_batches, total_accuracy/num_batches
 
  #TODO
 def modelTest():
@@ -166,8 +164,8 @@ def modelTest():
         outputs = fcn_model(inputs)
         loss = criterion(outputs, labels)
         total_loss += loss.item()
-        total_accuracy += util.pixel_acc(outputs, labels)
-        total_iou += util.iou(outputs, labels)
+        total_accuracy += util.pixel_acc(outputs, labels).item()
+        total_iou += util.iou(outputs, labels).item()
         num_batches += 1
       print("test_metrics: ", 
             total_accuracy/num_batches,
@@ -185,7 +183,6 @@ if __name__ == "__main__":
     plt.plot(np.arange(len(valid_epoch_loss)), valid_epoch_loss)
     plt.savefig("loss.png")
 
-    print("best_valid_metrics: ", best_valid_acc, best_valid_iou)
     # housekeeping
     gc.collect()
     torch.cuda.empty_cache()
