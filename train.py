@@ -23,7 +23,6 @@ def init_weights(m):
 
 #TODO Get class weights
 def getClassWeights():
-
     raise NotImplementedError
 
 
