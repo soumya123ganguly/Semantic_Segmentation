@@ -22,9 +22,15 @@ def init_weights(m):
         torch.nn.init.normal_(m.bias.data) #xavier not applicable for biases
 
 #TODO Get class weights
-def getClassWeights():
-
-    raise NotImplementedError
+def getClassWeights(n_class=21):
+  w = torch.zeros((n_class, 1))
+  for (_, labels) in train_loader:   
+    for i in range(n_class):
+      w[i] += torch.where(labels==i,1,0).sum(dtype=torch.float)
+  return w.pow_(-1)
+  
+class_weights = getClassWeights()
+    
 
 
 mean_std = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
@@ -57,7 +63,7 @@ accuracy = []
 #device =  "gpu" # TODO determine which device to use (cuda or cpu)
 
 optimizer = optim.Adam(fcn_model.parameters()) # TODO choose an optimizer
-criterion = torch.nn.CrossEntropyLoss() # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
+criterion = torch.nn.CrossEntropyLoss(weights=class_weights) # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 fcn_model.to(device)
@@ -174,14 +180,13 @@ def modelTest():
     fcn_model.train()  #TURNING THE TRAIN MODE BACK ON TO ENABLE BATCHNORM/DROPOUT!!
 
 if __name__ == "__main__":
-
     val(0)  # show the accuracy before training
     train()
     modelTest()
     plt.figure()
     plt.plot(np.arange(len(train_epoch_loss)), train_epoch_loss)
     plt.plot(np.arange(len(valid_epoch_loss)), valid_epoch_loss)
-    plt.savefig("loss.png")
+    plt.savefig("2_Loss_LeakyRelu_Xavier_Adam.png")
 
     # housekeeping
     gc.collect()
