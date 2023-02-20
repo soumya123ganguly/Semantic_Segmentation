@@ -29,7 +29,7 @@ def getClassWeights(n_class=21):
       w[i] += torch.where(labels==i,1,0).sum(dtype=torch.float)
   return w.pow_(-1)
   
-class_weights = getClassWeights()
+#class_weights = getClassWeights()
 
 mean_std = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 input_transform = standard_transforms.Compose([
@@ -61,7 +61,7 @@ accuracy = []
 #device =  "gpu" # TODO determine which device to use (cuda or cpu)
 
 optimizer = optim.Adam(fcn_model.parameters()) # TODO choose an optimizer
-criterion = torch.nn.CrossEntropyLoss(weights=class_weights) # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
+criterion = torch.nn.CrossEntropyLoss() # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 fcn_model.to(device)
