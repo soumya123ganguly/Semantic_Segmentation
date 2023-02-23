@@ -57,6 +57,8 @@ early_stop = False
 
 epochs = 100
 
+exp_name = "baseline"
+
 n_class = 21
 patience = 10
 epochs_wait = 0
@@ -67,9 +69,9 @@ train_epoch_loss = []
 valid_epoch_loss = []
 
 #device =  "gpu" # TODO determine which device to use (cuda or cpu)
-optimizer = optim.Adam(fcn_model.parameters(), lr=0.0005) # TODO choose an optimizer
-criterion = FocalLoss() # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
-#criterion = torch.nn.CrossEntropyLoss(weight=class_weights.cuda()) # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
+optimizer = optim.Adam(fcn_model.parameters()) # TODO choose an optimizer
+#criterion = FocalLoss() # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
+criterion = torch.nn.CrossEntropyLoss() # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
 #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, 10)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -124,7 +126,7 @@ def train():
         best_iou_score = current_miou_score
         best_acc_score = current_pacc_score
         # save the best model
-        torch.save(fcn_model.state_dict(), "model/floss.pth")
+        torch.save(fcn_model.state_dict(), "model/{}.pth".format(exp_name))
     print("best_valid_metrics: ", best_acc_score, best_iou_score)
 
  #TODO
@@ -163,7 +165,7 @@ def val(epoch):
 
  #TODO
 def modelTest():
-    fcn_model.load_state_dict(torch.load("model/floss.pth"))
+    fcn_model.load_state_dict(torch.load("model/{}.pth".format(exp_name)))
     fcn_model.eval()  # Put in eval mode (disables batchnorm/dropout) !
     
     with torch.no_grad():  # we don't need to calculate the gradient in the validation/testing
@@ -190,8 +192,8 @@ def modelTest():
               imgy[i, j] = voc.palette[3*imgcy[i, j]:3*imgcy[i, j]+3]
           imgt = imgt.astype("uint8")
           imgy = imgy.astype("uint8")
-          plt.imsave("imgs/grtf.png", imgt)         
-          plt.imsave("imgs/gryf.png", imgy)         
+          plt.imsave("imgs/grt_{}.png".format(exp_name), imgt)         
+          plt.imsave("imgs/gry_{}.png".format(exp_name), imgy)         
       print("test_metrics: ", 
             pacc/num_iter,
             miou/num_iter)
@@ -205,11 +207,11 @@ if __name__ == "__main__":
     plt.figure()
     plt.plot(np.arange(len(train_epoch_loss)), train_epoch_loss, label="train")
     plt.plot(np.arange(len(valid_epoch_loss)), valid_epoch_loss, label="validation")
-    plt.title("Focal Loss")
+    plt.title("Base Line")
     plt.xlabel("Epochs")
     plt.ylabel("Average Loss")
     plt.legend()
-    plt.savefig("plots/floss.png")
+    plt.savefig("plots/{}.png".format(exp_name))
 
     # housekeeping
     gc.collect()
