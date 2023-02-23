@@ -28,6 +28,8 @@ input_transform = standard_transforms.Compose([
         standard_transforms.ToTensor(),
         standard_transforms.RandomHorizontalFlip(),
         standard_transforms.RandomVerticalFlip(),
+        standard_transforms.RandomAffine((5, 10)),
+        standard_transforms.RandomCrop((220, 220), padding=2),
         standard_transforms.Normalize(*mean_std)
     ])
 
@@ -44,20 +46,18 @@ test_loader = DataLoader(dataset=test_dataset, batch_size= 16, shuffle=False)
 #TODO Get class weights
 def getClassWeights(n_class=21):
   w = torch.ones((n_class,))
-  for (_, labels) in train_loader:   
+  for (_, labels) in train_loader:
     for i in range(n_class):
       w[i] = torch.where(labels==i,1,0).sum(dtype=torch.float)
   return (w.pow_(-1))/(w.pow_(-1)).sum()
 
-#class_weights=class_weight.compute_class_weight('balanced',np.unique(y),y.numpy())
-#class_weights=torch.tensor(class_weights,dtype=torch.float)
 class_weights = getClassWeights()
 
 early_stop = False
 
 epochs = 100
 
-exp_name = "baseline"
+exp_name = "cosine_anhealing_leaky_relu_lr_l2_0.005"
 
 n_class = 21
 patience = 10
@@ -69,10 +69,10 @@ train_epoch_loss = []
 valid_epoch_loss = []
 
 #device =  "gpu" # TODO determine which device to use (cuda or cpu)
-optimizer = optim.Adam(fcn_model.parameters()) # TODO choose an optimizer
+optimizer = optim.Adam(fcn_model.parameters(), lr=0.0005, weight_decay=0.0005) # TODO choose an optimizer
 #criterion = FocalLoss() # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
 criterion = torch.nn.CrossEntropyLoss() # TODO Choose an appropriate loss function from https://pytorch.org/docs/stable/_modules/torch/nn/modules/loss.html
-#scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, 10)
+scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 fcn_model.to(device)
@@ -113,7 +113,7 @@ def train():
 
         # Clear the gradients
         optimizer.zero_grad()
-        #scheduler.step()
+        scheduler.step()
         train_loss += loss.item()
         num_iter += 1
         if iter % 10 == 0:
